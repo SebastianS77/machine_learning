@@ -1,0 +1,115 @@
+---
+title: "Personal activity data assignment"
+author: "Sebastian Schmeck"
+date: "23 November 2017"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+0. Overview
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks.
+
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+0. Load Data
+
+Loading two files from the website.
+
+```{r, echo= TRUE}
+pml_training <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"))
+pml_testing <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"))
+
+```
+
+
+1. Data Preparation
+
+First Parameter "Classe" is changed from character to factor. Then columns with NAs are deleted.
+
+```{r, echo=TRUE}
+library(caret)
+library(AppliedPredictiveModeling)
+
+pml_training$classe <- as.factor(pml_training$classe)
+summary(pml_training$classe)
+
+pml_training <- pml_training[,-c(12:36)]
+pml_training <- pml_training[,-c(25:34)]
+pml_training <- pml_training[,-c(34:48)]
+pml_training <- pml_training[,-c(37:51)]
+pml_training <- pml_training[,-c(38:47)]
+pml_training <- pml_training[,-c(50:64)]
+pml_training <- pml_training[,-c(51:60)]
+pml_training <- pml_training[,-c(46,58,59)]
+
+sum(is.na(pml_training))
+
+```
+
+
+2. Split Training data
+
+Training data are split 50% to train, 50% to test data.
+
+```{r, echo=TRUE}
+    adData = data.frame(pml_training)
+    trainIndex = createDataPartition(pml_training$classe, p = 0.50,list=FALSE)
+    train = adData[trainIndex,]
+    test = adData[-trainIndex,]
+```
+
+
+3. Train a model
+
+As method "rpart" is used to train a classification. It uses recursive partitioning for classification.
+
+```{r, echo=TRUE}
+set.seed(123)
+    trainedmodel <- train(classe ~ ., train, method = "rpart")
+```
+
+
+4. Plot model
+
+The model is plotted. As you can see only the classses A, B and E can be reached.
+
+```{r, echo=TRUE}
+library(rpart.plot)
+    rpart.plot(trainedmodel$finalModel)
+```
+
+
+5. Predict on train data set
+
+Using the prediction on the train data set gives a confusion matrix with an accuracy of 0.66.
+
+```{r, echo=TRUE}
+ predicted <- predict(trainedmodel, train)
+confusionMatrix(train$classe, predicted)
+```
+
+
+6. Predict on test data set (cross-validation)
+
+For the prediction on the test data set the confusion matrix changes only sligthly, therefor the accuracy keeps the same at 0.66.
+
+```{r, echo=TRUE}
+predicted2 <- predict(trainedmodel, test)
+confusionMatrix(test$classe, predicted2)
+```
+
+7. Expected out-of-sample error
+
+The expected out-of-sample error is calculated as 1 - accuracy for predictions made against the cross-validation set.
+
+Accuracy = 0.66
+
+-> out-of-sample error = 1- Accuracy = 0.34
+
